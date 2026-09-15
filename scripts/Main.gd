@@ -14,6 +14,7 @@ var current_state: State = State.TITLE
 @onready var hud: CanvasLayer = $HUD
 @onready var camera: Camera2D = $Camera2D
 @onready var build_menu: Control = $HUD/BuildMenu
+@onready var grid_bg: Node2D = $GridBackground
 
 # ビルド・セーブデータ管理
 var build_manager = null
@@ -104,7 +105,8 @@ func _process(delta: float) -> void:
 		State.PLAYING:
 			distance += spawner.current_scroll_speed * delta * 0.05
 			score += int(spawner.current_scroll_speed * delta * 0.1)
-			hud.update_stats(score, distance, spawner.current_section, spawner.next_checkpoint_dist)
+			grid_bg.update_zone_by_distance(distance)
+			hud.update_stats(score, distance, spawner.current_section, spawner.next_checkpoint_dist, spawner.current_zone)
 			
 			if player.global_position.y > 730.0:
 				player.rescue_from_fall()
@@ -121,6 +123,7 @@ func start_game() -> void:
 	score = 0
 	distance = 0.0
 	run_earned_coins = 0
+	grid_bg.update_zone_by_distance(0.0)
 	hud.hide_title()
 	hud.hide_pause()
 	hud.hide_game_over()

@@ -207,6 +207,38 @@ text = "STOMP x2!"
 label_settings = SubResource("LabelSettings_combo")
 horizontal_alignment = 1
 
+[node name="SectionProgressBar" type="ProgressBar" parent="HUD"]
+offset_left = 460.0
+offset_top = 48.0
+offset_right = 630.0
+offset_bottom = 58.0
+theme_override_styles/background = SubResource("StyleBoxFlat_exp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_fg")
+show_percentage = false
+
+[node name="ZoneLabel" type="Label" parent="HUD"]
+offset_left = 460.0
+offset_top = 60.0
+offset_right = 630.0
+offset_bottom = 78.0
+text = "ZONE 1: NEO CITY"
+label_settings = SubResource("LabelSettings_hp")
+horizontal_alignment = 2
+
+[node name="WarningBanner" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 92.0
+offset_right = 260.0
+offset_bottom = 126.0
+grow_horizontal = 2
+text = "⚡ UPGRADE STATION AHEAD ! ⚡"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
 [node name="PauseModal" type="Control" parent="HUD"]
 visible = false
 layout_mode = 3

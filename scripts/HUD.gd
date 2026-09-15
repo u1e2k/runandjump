@@ -16,6 +16,9 @@ signal quit_to_title_requested
 @onready var level_label: Label = $LevelLabel
 @onready var sp_label: Label = $SPLabel
 @onready var exp_bar: ProgressBar = $ExpBar
+@onready var section_progress_bar: ProgressBar = $SectionProgressBar
+@onready var zone_label: Label = $ZoneLabel
+@onready var warning_banner: Label = $WarningBanner
 
 @onready var title_panel: Control = $TitlePanel
 @onready var menu_start_btn: Button = $TitlePanel/MenuContainer/StartButton
@@ -162,9 +165,31 @@ func update_title_menu() -> void:
 		menu_build_btn.modulate = Color(1.3, 1.3, 1.3, 1.0)
 		menu_build_btn.text = "▶ [ LOADOUT & BUILD ]"
 
-func update_stats(score: int, distance: float, section: int, target_dist: float) -> void:
+func update_stats(score: int, distance: float, section: int, target_dist: float, zone: int) -> void:
 	score_label.text = "SCORE: %06d" % score
 	distance_label.text = "SEC.%d  %dm" % [section, int(distance)]
+	
+	# セクション進捗バー
+	var section_start_dist := (section - 1) * 500.0
+	var section_len := 500.0
+	var progress := clampf((distance - section_start_dist) / section_len, 0.0, 1.0)
+	section_progress_bar.max_value = 1.0
+	section_progress_bar.value = progress
+	
+	# ゾーン名
+	match zone:
+		1: zone_label.text = "ZONE 1: NEO CITY"
+		2: zone_label.text = "ZONE 2: ACID SLUM"
+		_: zone_label.text = "ZONE 3: DIGITAL VOID"
+		
+	# チェックポイント接近警告 (残り80m以内)
+	var dist_remaining := target_dist - distance
+	if dist_remaining <= 80.0 and dist_remaining > 0.0:
+		warning_banner.visible = true
+		var blink := int(Time.get_ticks_msec() * 0.006) % 2 == 0
+		warning_banner.modulate = Color(1.0, 0.9, 0.2, 1.0 if blink else 0.4)
+	else:
+		warning_banner.visible = false
 
 func update_hp(current: int, max_hp: int) -> void:
 	hp_bar.max_value = max_hp
@@ -200,18 +225,21 @@ func show_title() -> void:
 	level_up_modal.visible = false
 	pause_modal.visible = false
 	hud_pause_button.visible = false
+	warning_banner.visible = false
 	title_menu_index = 0
 	update_title_menu()
 
 func hide_title() -> void:
 	title_panel.visible = false
 	hud_pause_button.visible = true
+	warning_banner.visible = false
 
 func show_upgrade_station(skills: Array, remaining_sp: int) -> void:
 	is_leveling_up = true
 	current_offered_skills = skills
 	selected_card_index = 0
 	level_up_modal.visible = true
+	warning_banner.visible = false
 	
 	modal_title.text = "UPGRADE STATION"
 	modal_sp_count_label.text = "AVAILABLE SP: %d ⚡" % remaining_sp

@@ -189,9 +189,14 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_released("jump") and velocity.y < MIN_JUMP_VELOCITY:
 		velocity.y = MIN_JUMP_VELOCITY
 		
-	velocity.x = (TARGET_X - global_position.x) * 12.0
+	# 基準X座標（160px）への前進復帰。足場に押し戻されても自然に耐え、抜けると元の位置へ戻る
+	var diff_x := TARGET_X - global_position.x
+	velocity.x = clampf(diff_x * 8.0, -400.0, 320.0)
 	
 	move_and_slide()
+	
+	# 画面外への押し出されを防止（左端24px、右端680pxにクランプ）
+	global_position.x = clampf(global_position.x, 24.0, 680.0)
 	queue_redraw()
 
 func execute_jump() -> void:
