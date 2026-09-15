@@ -35,9 +35,6 @@ var shake_amount: float = 0.0
 const PLAYER_START_POS := Vector2(160, 480)
 
 func _ready() -> void:
-	# Mainノードはポーズ中も入力を受け付ける
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	
 	init_audio()
 	
 	# プレイヤーシグナル接続
@@ -79,7 +76,6 @@ func create_player(stream: AudioStreamWAV) -> AudioStreamPlayer:
 	return p
 
 func _process(delta: float) -> void:
-	# 画面シェイク処理
 	if not get_tree().paused:
 		if shake_amount > 0.0:
 			camera.offset = Vector2(randf_range(-shake_amount, shake_amount), randf_range(-shake_amount, shake_amount))
@@ -102,9 +98,8 @@ func _process(delta: float) -> void:
 				trigger_shake(8.0)
 				
 		State.LEVEL_UP:
-			# ポーズ中のワンボタンでスキル決定
-			if Input.is_action_just_pressed("jump"):
-				hud.confirm_selection()
+			# ポーズ中のためMainの_processではなくHUDの_unhandled_inputで処理される
+			pass
 				
 		State.GAME_OVER:
 			retry_ready_timer -= delta
@@ -154,7 +149,7 @@ func _on_player_exp_gained(current: int, target: int, level: int) -> void:
 func _on_player_leveled_up(new_level: int) -> void:
 	sfx_levelup.play()
 	current_state = State.LEVEL_UP
-	get_tree().paused = true # ゲームを一時停止！
+	get_tree().paused = true # ゲームツリーを確実にポーズ停止！
 	
 	var offered := SkillDatabaseScript.get_random_skills(3, player.skills)
 	hud.show_level_up(offered)

@@ -10,6 +10,7 @@ config/name="RunAndJump"
 config/description="RG Rotate One-Button Roguelike Jump Action"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.png"
 
 [display]
 

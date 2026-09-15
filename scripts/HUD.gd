@@ -28,6 +28,7 @@ var auto_cycle_timer: float = 0.0
 var is_leveling_up: bool = false
 
 func _ready() -> void:
+	# HUDノードはポーズ中も常に動作する
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	game_over_panel.visible = false
 	title_panel.visible = true
@@ -41,12 +42,18 @@ func _process(delta: float) -> void:
 			combo_count = 0
 			combo_label.visible = false
 			
+	# ポーズ中も動作するスキル自動巡回
 	if is_leveling_up and current_offered_skills.size() > 0:
 		auto_cycle_timer += delta
 		if auto_cycle_timer >= 0.7:
 			auto_cycle_timer = 0.0
 			selected_card_index = (selected_card_index + 1) % current_offered_skills.size()
 			update_card_highlights()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if is_leveling_up and event.is_action_pressed("jump"):
+		confirm_selection()
+		get_viewport().set_input_as_handled()
 
 func update_stats(score: int, distance: float) -> void:
 	score_label.text = "SCORE: %06d" % score
