@@ -81,8 +81,7 @@ func collect() -> void:
 
 func _draw() -> void:
 	# 3D回転風の幅変化
-	var width_scale := abs(cos(spin_phase))
-	width_scale = max(0.2, width_scale)
+	var width_scale: float = maxf(0.2, absf(cos(spin_phase)))
 	
 	var r: float = 10.0
 	var outer_color := Color(1.0, 0.85, 0.2, 0.95)

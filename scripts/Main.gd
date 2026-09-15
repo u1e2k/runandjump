@@ -126,6 +126,7 @@ func start_game() -> void:
 	distance = 0.0
 	run_earned_coins = 0
 	grid_bg.update_zone_by_distance(0.0)
+	hud.update_coins(0)
 	hud.hide_title()
 	hud.hide_pause()
 	hud.hide_game_over()
@@ -240,14 +241,10 @@ func _on_player_shockwave(pos: Vector2) -> void:
 
 func _on_enemy_stomped(enemy: Node2D) -> void:
 	spawn_stomp_particles(enemy.global_position)
+	spawner.spawn_dropped_coins(enemy.global_position, 2)
 
 func _on_enemy_defeated(pos: Vector2) -> void:
 	score += 100
-	run_earned_coins += 2
-	if build_manager:
-		build_manager.coins += 2
-		build_manager.save_data()
-		
 	if player.has_method("on_enemy_killed"):
 		player.on_enemy_killed()
 		
@@ -255,6 +252,23 @@ func _on_enemy_defeated(pos: Vector2) -> void:
 	gem.position = pos
 	gem.target_player = player
 	add_child(gem)
+	
+	spawner.spawn_dropped_coins(pos, randi_range(1, 3))
+
+func _on_coin_collected(val: int) -> void:
+	run_earned_coins += val
+	score += val * 50
+	if build_manager:
+		build_manager.coins += val
+		build_manager.save_data()
+	sfx_coin.play()
+	hud.update_coins(run_earned_coins)
+
+func _on_enemy_bullet_fired(pos: Vector2, dir: Vector2) -> void:
+	var bullet := EnemyBullet.new()
+	bullet.position = pos
+	bullet.direction = dir
+	add_child(bullet)
 
 func _on_player_died() -> void:
 	get_tree().paused = false
@@ -321,3 +335,33 @@ class StompRing extends Node2D:
 		
 	func _draw() -> void:
 		draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Color(1.0, 0.8, 0.2, alpha), 3.0)
+
+class EnemyBullet extends Area2D:
+	var speed: float = 240.0
+	var direction: Vector2 = Vector2(-1.0, 0.0)
+	var damage: int = 12
+	var life_timer: float = 4.0
+	
+	func _ready() -> void:
+		var col := CollisionShape2D.new()
+		var circle := CircleShape2D.new()
+		circle.radius = 8.0
+		col.shape = circle
+		add_child(col)
+		body_entered.connect(_on_body_entered)
+		
+	func _process(delta: float) -> void:
+		position += direction * speed * delta
+		life_timer -= delta
+		if life_timer <= 0.0 or position.x < -100.0 or position.x > 820.0:
+			queue_free()
+		queue_redraw()
+		
+	func _on_body_entered(body: Node2D) -> void:
+		if body.name == "Player" and body.has_method("take_damage"):
+			body.take_damage(damage)
+			queue_free()
+			
+	func _draw() -> void:
+		draw_circle(Vector2.ZERO, 6.0, Color(1.0, 0.2, 0.3, 0.95))
+		draw_circle(Vector2.ZERO, 3.0, Color(1.0, 0.9, 0.4, 1.0))
