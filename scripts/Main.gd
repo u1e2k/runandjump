@@ -13,7 +13,6 @@ var current_state: State = State.TITLE
 @onready var spawner: Node2D = $LevelSpawner
 @onready var hud: CanvasLayer = $HUD
 @onready var camera: Camera2D = $Camera2D
-@onready var build_menu: Control = $HUD/BuildMenu
 @onready var grid_bg: Node2D = $GridBackground
 
 # ビルド・セーブデータ管理
@@ -70,10 +69,7 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.quit_to_title_requested.connect(_on_quit_to_title_requested)
 	
-	build_menu.back_to_title.connect(_on_back_from_build_menu)
-	
 	player.visible = false
-	build_menu.visible = false
 	hud.show_title()
 
 func init_audio() -> void:
@@ -128,7 +124,6 @@ func start_game() -> void:
 	hud.hide_pause()
 	hud.hide_game_over()
 	hud.hide_upgrade_station()
-	build_menu.close()
 	player.reset(PLAYER_START_POS, build_manager)
 	spawner.start_run()
 	player.execute_jump()
@@ -163,14 +158,7 @@ func _on_quit_to_title_requested() -> void:
 	hud.show_title()
 
 func _on_open_build_menu() -> void:
-	current_state = State.BUILD_MENU
-	hud.hide_title()
-	build_menu.open(build_manager)
-
-func _on_back_from_build_menu() -> void:
-	build_menu.close()
-	current_state = State.TITLE
-	hud.show_title()
+	get_tree().change_scene_to_file("res://scenes/BuildMenu.tscn")
 
 func trigger_shake(amount: float) -> void:
 	shake_amount = max(shake_amount, amount)

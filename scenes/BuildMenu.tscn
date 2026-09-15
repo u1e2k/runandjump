@@ -1,0 +1,205 @@
+[gd_scene load_steps=7 format=3 uid="uid://b7u3d8k0l2m1q"]
+
+[ext_resource type="Script" path="res://scripts/BuildMenu.gd" id="1_build"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.03, 0.04, 0.08, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font_size = 28
+font_color = Color(0.2, 0.95, 1, 1)
+outline_size = 6
+outline_color = Color(0.02, 0.15, 0.3, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_hud"]
+font_size = 20
+font_color = Color(0.9, 0.95, 1, 1)
+outline_size = 4
+outline_color = Color(0.05, 0.05, 0.1, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_combo"]
+font_size = 28
+font_color = Color(1, 0.8, 0.2, 1)
+outline_size = 6
+outline_color = Color(0.4, 0.2, 0, 0.9)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_detail"]
+bg_color = Color(0.07, 0.1, 0.18, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.5, 0.8, 0.5)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="BuildMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_build")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 28.0
+offset_right = 250.0
+offset_bottom = 68.0
+grow_horizontal = 2
+text = "LOADOUT & UPGRADES"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="CurrencyLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 68.0
+offset_right = 200.0
+offset_bottom = 98.0
+grow_horizontal = 2
+text = "CORE SHARDS: 0 💎"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="TabContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 104.0
+offset_right = 300.0
+offset_bottom = 144.0
+grow_horizontal = 2
+alignment = 1
+
+[node name="TabWeapons" type="Button" parent="TabContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "WEAPONS 🔫"
+
+[node name="TabRelics" type="Button" parent="TabContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "RELICS 🛡️"
+
+[node name="TabPerks" type="Button" parent="TabContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "PERKS ⚡"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -200.0
+offset_right = 300.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ItemContainer" type="VBoxContainer" parent="ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="DetailPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -290.0
+offset_right = 300.0
+offset_bottom = -100.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_detail")
+
+[node name="DetailIcon" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 64.0
+offset_bottom = 62.0
+text = "🔫"
+label_settings = SubResource("LabelSettings_combo")
+
+[node name="DetailName" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 74.0
+offset_top = 16.0
+offset_right = 380.0
+offset_bottom = 46.0
+text = "PULSE LASER"
+label_settings = SubResource("LabelSettings_hud")
+
+[node name="DetailDesc" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 440.0
+offset_bottom = 120.0
+text = "高速直線ビーム。安定した連射と長射程。"
+autowrap_mode = 2
+
+[node name="ActionButton" type="Button" parent="DetailPanel"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -25.0
+offset_right = -15.0
+offset_bottom = 25.0
+grow_horizontal = 0
+grow_vertical = 2
+focus_mode = 0
+text = "EQUIP"
+
+[node name="BackButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = -80.0
+offset_right = 140.0
+offset_bottom = -35.0
+grow_horizontal = 2
+grow_vertical = 0
+focus_mode = 0
+text = "◀ [ BACK (B / TAP) ]"

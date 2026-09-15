@@ -52,6 +52,14 @@ var title_menu_index: int = 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	
+	menu_start_btn.focus_mode = Control.FOCUS_NONE
+	menu_build_btn.focus_mode = Control.FOCUS_NONE
+	pause_btn_resume.focus_mode = Control.FOCUS_NONE
+	pause_btn_retry.focus_mode = Control.FOCUS_NONE
+	pause_btn_quit.focus_mode = Control.FOCUS_NONE
+	hud_pause_button.focus_mode = Control.FOCUS_NONE
+	
 	game_over_panel.visible = false
 	title_panel.visible = true
 	combo_label.visible = false

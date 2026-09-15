@@ -1,8 +1,7 @@
 extends Control
 
-signal back_to_title
-
 const EquipmentDatabaseScript = preload("res://scripts/EquipmentDatabase.gd")
+const BuildManagerScript = preload("res://scripts/BuildManager.gd")
 
 @onready var currency_label: Label = $CurrencyLabel
 @onready var tab_container: HBoxContainer = $TabContainer
@@ -18,70 +17,63 @@ var build_manager = null
 var current_tab: int = 0 # 0: Weapons, 1: Accessories, 2: Perks
 var current_items: Array = []
 var selected_item_index: int = 0
-var is_on_back_button: bool = false
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	back_button.pressed.connect(func():
-		back_to_title.emit()
-	)
+	build_manager = BuildManagerScript.new()
+	
+	back_button.focus_mode = Control.FOCUS_NONE
+	action_button.focus_mode = Control.FOCUS_NONE
+	
+	back_button.pressed.connect(_on_back_pressed)
 	action_button.pressed.connect(_on_action_pressed)
-
-func open(mgr) -> void:
-	build_manager = mgr
-	visible = true
+	
 	current_tab = 0
 	selected_item_index = 0
-	is_on_back_button = false
 	refresh_ui()
 
-func close() -> void:
-	visible = false
-
-func _unhandled_input(event: InputEvent) -> void:
-	if not visible:
-		return
-		
-	# Bボタン / ESC / キャンセル入力で即座に戻る
-	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause_game"):
-		back_to_title.emit()
+func _input(event: InputEvent) -> void:
+	# Bボタン / ESC / Back 入力でタイトルシーンへ戻る
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
 		get_viewport().set_input_as_handled()
 		return
 		
+	# 十字キー左右: タブの切り替え (WEAPONS ⇄ RELICS ⇄ PERKS)
 	if event.is_action_pressed("ui_left"):
 		current_tab = (current_tab - 1 + 3) % 3
 		selected_item_index = 0
-		is_on_back_button = false
 		refresh_ui()
 		get_viewport().set_input_as_handled()
+		return
 	elif event.is_action_pressed("ui_right"):
 		current_tab = (current_tab + 1) % 3
 		selected_item_index = 0
-		is_on_back_button = false
 		refresh_ui()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_up"):
-		if is_on_back_button:
-			is_on_back_button = false
-			selected_item_index = current_items.size() - 1
-		elif selected_item_index > 0:
-			selected_item_index -= 1
-		update_selection()
+		return
+		
+	# 十字キー上下: アイテムリスト内の選択移動（リスト内でループ）
+	if event.is_action_pressed("ui_up"):
+		if current_items.size() > 0:
+			selected_item_index = (selected_item_index - 1 + current_items.size()) % current_items.size()
+			update_selection()
 		get_viewport().set_input_as_handled()
+		return
 	elif event.is_action_pressed("ui_down"):
-		if not is_on_back_button:
-			if selected_item_index < current_items.size() - 1:
-				selected_item_index += 1
-			else:
-				is_on_back_button = true
-		update_selection()
+		if current_items.size() > 0:
+			selected_item_index = (selected_item_index + 1) % current_items.size()
+			update_selection()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("jump") or event.is_action_pressed("ui_accept"):
-		if is_on_back_button:
-			back_to_title.emit()
-		else:
-			_on_action_pressed()
+		return
+		
+	# Aボタン / Enter / Space (ui_accept / jump): 選択中アイテムの装備・強化
+	if event.is_action_pressed("ui_accept") or event.is_action_pressed("jump"):
+		_on_action_pressed()
 		get_viewport().set_input_as_handled()
+		return
+
+func _on_back_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/Main.tscn")
 
 func refresh_ui() -> void:
 	if not build_manager:
@@ -120,6 +112,7 @@ func update_tabs() -> void:
 	var tabs := tab_container.get_children()
 	for i in range(tabs.size()):
 		var tab_btn: Button = tabs[i] as Button
+		tab_btn.focus_mode = Control.FOCUS_NONE
 		if i == current_tab:
 			tab_btn.modulate = Color(0.2, 0.95, 1.0, 1.0)
 			tab_btn.text = "[ " + tab_names[i] + " ]"
@@ -131,6 +124,7 @@ func create_item_row(index: int, item: Dictionary) -> Button:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(380, 44)
 	btn.flat = true
+	btn.focus_mode = Control.FOCUS_NONE
 	
 	var is_unlocked: bool = build_manager.unlocked_items.has(item.get("id", ""))
 	var is_equipped: bool = false
@@ -154,7 +148,6 @@ func create_item_row(index: int, item: Dictionary) -> Button:
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	
 	btn.pressed.connect(func():
-		is_on_back_button = false
 		selected_item_index = index
 		update_selection()
 		_on_action_pressed()
@@ -165,17 +158,13 @@ func update_selection() -> void:
 	var rows := item_container.get_children()
 	for i in range(rows.size()):
 		var row: Button = rows[i] as Button
-		if not is_on_back_button and i == selected_item_index:
+		if i == selected_item_index:
 			row.modulate = Color(1.3, 1.3, 1.3, 1.0)
 		else:
 			row.modulate = Color(0.7, 0.7, 0.8, 0.8)
 			
-	if is_on_back_button:
-		back_button.modulate = Color(1.3, 1.3, 1.3, 1.0)
-		back_button.text = "▶ [ BACK TO TITLE ] ◀"
-	else:
-		back_button.modulate = Color(0.7, 0.8, 0.9, 0.8)
-		back_button.text = "◀ [ BACK TO TITLE ]"
+	back_button.modulate = Color(0.8, 0.85, 0.95, 0.9)
+	back_button.text = "◀ [ BACK (B / TAP) ]"
 			
 	if selected_item_index < current_items.size():
 		var item: Dictionary = current_items[selected_item_index]
@@ -211,9 +200,6 @@ func update_selection() -> void:
 			action_button.disabled = (build_manager.coins < cost)
 
 func _on_action_pressed() -> void:
-	if is_on_back_button:
-		back_to_title.emit()
-		return
 	if selected_item_index >= current_items.size() or not build_manager:
 		return
 	var item: Dictionary = current_items[selected_item_index]
