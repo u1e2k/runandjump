@@ -7,15 +7,17 @@ signal landed
 signal damaged(current_hp: int, max_hp: int)
 signal exp_gained(current: int, target: int, level: int)
 signal leveled_up(new_level: int)
-signal shoot_bullet(pos: Vector2, dir: Vector2)
+signal shoot_bullet(pos: Vector2, dir: Vector2, wtype: String, dmg: int)
 signal shockwave_triggered(pos: Vector2)
 
 # 物理定数
-const GRAVITY: float = 1450.0
+const BASE_GRAVITY: float = 1450.0
+var current_gravity: float = 1450.0
 const JUMP_VELOCITY: float = -560.0
 const MIN_JUMP_VELOCITY: float = -220.0
 const BOUNCE_VELOCITY: float = -640.0
 const MAX_FALL_SPEED: float = 850.0
+const TARGET_X: float = 160.0
 
 # 快適性パラメータ
 const COYOTE_TIME: float = 0.12
@@ -26,7 +28,7 @@ var jump_buffer_timer: float = 0.0
 var is_alive: bool = true
 var was_on_floor: bool = false
 
-# HP（3桁スケール: 初期100） & 無敵時間
+# HP & 無敵時間
 var max_hp: int = 100
 var current_hp: int = 100
 var invincible_timer: float = 0.0
@@ -37,16 +39,22 @@ var level: int = 1
 var current_exp: int = 0
 var exp_to_next_level: int = 35
 
-# スキル & パッシブ
-var skills: Dictionary = {}
-var max_air_jumps: int = 1 # 最初から2段ジャンプ
-var air_jumps_left: int = 1
-var shoot_interval: float = 0.75
+# 装備・パーク
+var current_weapon: String = "pulse_laser"
+var current_accessory: String = "none"
+var weapon_damage: int = 1
+var weapon_bullet_count: int = 1
+var base_shoot_interval: float = 0.7
+var shoot_interval: float = 0.7
 var shoot_timer: float = 0.0
-var bullet_count: int = 1
+
+var skills: Dictionary = {}
+var max_air_jumps: int = 1
+var air_jumps_left: int = 1
 var magnet_multiplier: float = 1.0
 var has_spike_boots: bool = false
 var has_stomp_shock: bool = false
+var kill_counter: int = 0
 
 # ビジュアル用
 var squash_stretch: Vector2 = Vector2(1.0, 1.0)
@@ -60,12 +68,48 @@ func _ready() -> void:
 	is_alive = true
 	trail_positions.clear()
 
-func reset(start_pos: Vector2) -> void:
+func setup_loadout(build_mgr) -> void:
+	current_weapon = build_mgr.equipped_weapon
+	current_accessory = build_mgr.equipped_accessory
+	
+	var perk_hp: int = build_mgr.perk_levels.get("max_hp", 0) * 15
+	max_hp = 100 + perk_hp
+	current_hp = max_hp
+	
+	var perk_rate: float = 1.0 - float(build_mgr.perk_levels.get("fire_rate", 0)) * 0.08
+	var perk_mag: float = 1.0 + float(build_mgr.perk_levels.get("magnet", 0)) * 0.25
+	magnet_multiplier = perk_mag
+	
+	match current_weapon:
+		"pulse_laser":
+			weapon_damage = 1
+			base_shoot_interval = 0.7 * perk_rate
+			weapon_bullet_count = 1
+		"scatter_shot":
+			weapon_damage = 1
+			base_shoot_interval = 0.85 * perk_rate
+			weapon_bullet_count = 3
+		"plasma_cannon":
+			weapon_damage = 3
+			base_shoot_interval = 1.2 * perk_rate
+			weapon_bullet_count = 1
+			
+	shoot_interval = base_shoot_interval
+	
+	current_gravity = BASE_GRAVITY
+	has_spike_boots = false
+	match current_accessory:
+		"feather_charm":
+			current_gravity = BASE_GRAVITY * 0.85
+		"spike_guard":
+			has_spike_boots = true
+		"vampire_ring":
+			kill_counter = 0
+
+func reset(start_pos: Vector2, build_mgr = null) -> void:
 	global_position = start_pos
 	velocity = Vector2.ZERO
 	is_alive = true
-	max_hp = 100
-	current_hp = max_hp
 	invincible_timer = 0.0
 	level = 1
 	current_exp = 0
@@ -73,12 +117,16 @@ func reset(start_pos: Vector2) -> void:
 	skills.clear()
 	max_air_jumps = 1
 	air_jumps_left = 1
-	shoot_interval = 0.75
-	shoot_timer = 0.0
-	bullet_count = 1
-	magnet_multiplier = 1.0
-	has_spike_boots = false
 	has_stomp_shock = false
+	kill_counter = 0
+	
+	if build_mgr:
+		setup_loadout(build_mgr)
+	else:
+		max_hp = 100
+		current_hp = 100
+		shoot_interval = 0.75
+		
 	coyote_timer = 0.0
 	jump_buffer_timer = 0.0
 	squash_stretch = Vector2(1.0, 1.0)
@@ -105,7 +153,7 @@ func _physics_process(delta: float) -> void:
 		execute_auto_shoot()
 		
 	if not is_on_floor():
-		velocity.y += GRAVITY * delta
+		velocity.y += current_gravity * delta
 		velocity.y = min(velocity.y, MAX_FALL_SPEED)
 		coyote_timer -= delta
 		rotation_angle += delta * 6.0
@@ -133,6 +181,9 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_released("jump") and velocity.y < MIN_JUMP_VELOCITY:
 		velocity.y = MIN_JUMP_VELOCITY
 		
+	# X位置の自動復元（左に押し流されないようTARGET_Xへスムーズに補正）
+	velocity.x = (TARGET_X - global_position.x) * 12.0
+	
 	move_and_slide()
 	queue_redraw()
 
@@ -153,12 +204,13 @@ func execute_air_jump() -> void:
 
 func execute_auto_shoot() -> void:
 	var muzzle_pos := global_position + Vector2(20.0, 0.0)
-	for i in range(bullet_count):
+	var count := weapon_bullet_count
+	for i in range(count):
 		var angle_offset: float = 0.0
-		if bullet_count > 1:
-			angle_offset = (float(i) - float(bullet_count - 1) * 0.5) * 0.15
+		if count > 1:
+			angle_offset = (float(i) - float(count - 1) * 0.5) * 0.16
 		var dir := Vector2(cos(angle_offset), sin(angle_offset))
-		shoot_bullet.emit(muzzle_pos, dir)
+		shoot_bullet.emit(muzzle_pos, dir, current_weapon, weapon_damage)
 
 func bounce(multiplier: float = 1.0) -> void:
 	if not is_alive:
@@ -188,12 +240,20 @@ func take_damage(amount: int = 20) -> void:
 	if current_hp <= 0:
 		die()
 
+func on_enemy_killed() -> void:
+	if current_accessory == "vampire_ring":
+		kill_counter += 1
+		if kill_counter >= 5:
+			kill_counter = 0
+			current_hp = min(max_hp, current_hp + 6)
+			damaged.emit(current_hp, max_hp)
+
 func rescue_from_fall() -> void:
 	if not is_alive:
 		return
-	take_damage(25) # 落下は25ダメージ
+	take_damage(25)
 	if is_alive:
-		global_position = Vector2(160.0, 120.0)
+		global_position = Vector2(TARGET_X, 120.0)
 		velocity = Vector2(0.0, 100.0)
 		air_jumps_left = max_air_jumps
 
@@ -219,17 +279,17 @@ func apply_skill(skill_id: String) -> void:
 		"triple_jump":
 			max_air_jumps = 1 + rank
 		"rapid_fire":
-			shoot_interval = 0.75 * pow(0.72, rank)
+			shoot_interval = base_shoot_interval * pow(0.72, rank)
 		"multishot":
-			bullet_count = 1 + rank
+			weapon_bullet_count += 1
 		"stomp_shock":
 			has_stomp_shock = true
 		"magnet":
-			magnet_multiplier = 1.0 + float(rank) * 0.8
+			magnet_multiplier = (magnet_multiplier) + 0.8
 		"spike_boots":
 			has_spike_boots = true
 		"heal_max_hp":
-			max_hp += 30 # 最大HP+30 & 全回復
+			max_hp += 30
 			current_hp = max_hp
 			damaged.emit(current_hp, max_hp)
 

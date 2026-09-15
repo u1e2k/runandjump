@@ -4,14 +4,19 @@ const SoundSynthScript = preload("res://scripts/SoundSynth.gd")
 const SkillDatabaseScript = preload("res://scripts/SkillDatabase.gd")
 const ProjectileScript = preload("res://scripts/Projectile.gd")
 const ExpGemScript = preload("res://scripts/ExpGem.gd")
+const BuildManagerScript = preload("res://scripts/BuildManager.gd")
 
-enum State { TITLE, PLAYING, LEVEL_UP, GAME_OVER }
+enum State { TITLE, BUILD_MENU, PLAYING, LEVEL_UP, PAUSED, GAME_OVER }
 var current_state: State = State.TITLE
 
 @onready var player: CharacterBody2D = $Player
 @onready var spawner: Node2D = $LevelSpawner
 @onready var hud: CanvasLayer = $HUD
 @onready var camera: Camera2D = $Camera2D
+@onready var build_menu: Control = $HUD/BuildMenu
+
+# ビルド・セーブデータ管理
+var build_manager = null
 
 # オーディオプレイヤー
 var sfx_jump: AudioStreamPlayer
@@ -28,6 +33,7 @@ var score: int = 0
 var high_score: int = 0
 var distance: float = 0.0
 var retry_ready_timer: float = 0.0
+var run_earned_coins: int = 0
 
 # 画面シェイク
 var shake_amount: float = 0.0
@@ -35,6 +41,7 @@ var shake_amount: float = 0.0
 const PLAYER_START_POS := Vector2(160, 480)
 
 func _ready() -> void:
+	build_manager = BuildManagerScript.new()
 	init_audio()
 	
 	# プレイヤーシグナル接続
@@ -54,8 +61,17 @@ func _ready() -> void:
 	
 	# HUDシグナル接続
 	hud.skill_selected.connect(_on_skill_selected)
+	hud.start_game_requested.connect(start_game)
+	hud.open_build_menu.connect(_on_open_build_menu)
+	hud.pause_requested.connect(_on_pause_requested)
+	hud.resume_requested.connect(_on_resume_requested)
+	hud.restart_requested.connect(_on_restart_requested)
+	hud.quit_to_title_requested.connect(_on_quit_to_title_requested)
+	
+	build_menu.back_to_title.connect(_on_back_from_build_menu)
 	
 	player.visible = false
+	build_menu.visible = false
 	hud.show_title()
 
 func init_audio() -> void:
@@ -84,10 +100,6 @@ func _process(delta: float) -> void:
 			camera.offset = Vector2.ZERO
 		
 	match current_state:
-		State.TITLE:
-			if Input.is_action_just_pressed("jump"):
-				start_game()
-				
 		State.PLAYING:
 			distance += spawner.current_scroll_speed * delta * 0.05
 			score += int(spawner.current_scroll_speed * delta * 0.1)
@@ -97,13 +109,9 @@ func _process(delta: float) -> void:
 				player.rescue_from_fall()
 				trigger_shake(8.0)
 				
-		State.LEVEL_UP:
-			# ポーズ中のためMainの_processではなくHUDの_unhandled_inputで処理される
-			pass
-				
 		State.GAME_OVER:
 			retry_ready_timer -= delta
-			if retry_ready_timer <= 0.0 and Input.is_action_just_pressed("jump"):
+			if retry_ready_timer <= 0.0 and (Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("ui_accept")):
 				restart_game()
 
 func start_game() -> void:
@@ -111,15 +119,53 @@ func start_game() -> void:
 	current_state = State.PLAYING
 	score = 0
 	distance = 0.0
+	run_earned_coins = 0
 	hud.hide_title()
+	hud.hide_pause()
 	hud.hide_game_over()
-	player.reset(PLAYER_START_POS)
+	build_menu.close()
+	player.reset(PLAYER_START_POS, build_manager)
 	spawner.start_run()
 	player.execute_jump()
 	sfx_jump.play()
 
 func restart_game() -> void:
 	start_game()
+
+func _on_pause_requested() -> void:
+	if current_state == State.PLAYING:
+		current_state = State.PAUSED
+		get_tree().paused = true
+		hud.show_pause()
+
+func _on_resume_requested() -> void:
+	if current_state == State.PAUSED:
+		get_tree().paused = false
+		hud.hide_pause()
+		current_state = State.PLAYING
+
+func _on_restart_requested() -> void:
+	hud.hide_pause()
+	get_tree().paused = false
+	restart_game()
+
+func _on_quit_to_title_requested() -> void:
+	hud.hide_pause()
+	get_tree().paused = false
+	spawner.stop_run()
+	player.visible = false
+	current_state = State.TITLE
+	hud.show_title()
+
+func _on_open_build_menu() -> void:
+	current_state = State.BUILD_MENU
+	hud.hide_title()
+	build_menu.open(build_manager)
+
+func _on_back_from_build_menu() -> void:
+	build_menu.close()
+	current_state = State.TITLE
+	hud.show_title()
 
 func trigger_shake(amount: float) -> void:
 	shake_amount = max(shake_amount, amount)
@@ -149,20 +195,22 @@ func _on_player_exp_gained(current: int, target: int, level: int) -> void:
 func _on_player_leveled_up(new_level: int) -> void:
 	sfx_levelup.play()
 	current_state = State.LEVEL_UP
-	get_tree().paused = true # ゲームツリーを確実にポーズ停止！
+	get_tree().paused = true
 	
 	var offered := SkillDatabaseScript.get_random_skills(3, player.skills)
 	hud.show_level_up(offered)
 
 func _on_skill_selected(skill_id: String) -> void:
 	player.apply_skill(skill_id)
-	get_tree().paused = false # ゲーム再開！
+	get_tree().paused = false
 	current_state = State.PLAYING
 
-func _on_player_shoot_bullet(pos: Vector2, dir: Vector2) -> void:
+func _on_player_shoot_bullet(pos: Vector2, dir: Vector2, wtype: String, dmg: int) -> void:
 	var bullet: Area2D = ProjectileScript.new()
 	bullet.position = pos
 	bullet.direction = dir
+	bullet.weapon_type = wtype
+	bullet.damage = dmg
 	add_child(bullet)
 	sfx_shoot.play()
 
@@ -176,6 +224,14 @@ func _on_enemy_stomped(enemy: Node2D) -> void:
 
 func _on_enemy_defeated(pos: Vector2) -> void:
 	score += 100
+	run_earned_coins += 2
+	if build_manager:
+		build_manager.coins += 2
+		build_manager.save_data()
+		
+	if player.has_method("on_enemy_killed"):
+		player.on_enemy_killed()
+		
 	var gem: Node2D = ExpGemScript.new()
 	gem.position = pos
 	gem.target_player = player
@@ -193,7 +249,7 @@ func _on_player_died() -> void:
 	if score > high_score:
 		high_score = score
 		
-	hud.show_game_over(score, high_score)
+	hud.show_game_over(score, high_score, run_earned_coins)
 
 func spawn_death_particles(pos: Vector2) -> void:
 	var root := Node2D.new()

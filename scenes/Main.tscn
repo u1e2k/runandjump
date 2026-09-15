@@ -1,13 +1,14 @@
-[gd_scene load_steps=15 format=3 uid="uid://c6q82l8k3j0a"]
+[gd_scene load_steps=19 format=3 uid="uid://c6q82l8k3j0a"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/LevelSpawner.gd" id="2_spawner"]
 [ext_resource type="PackedScene" path="res://scenes/Player.tscn" id="3_player"]
 [ext_resource type="Script" path="res://scripts/HUD.gd" id="4_hud"]
 [ext_resource type="Script" path="res://scripts/GridBackground.gd" id="5_grid"]
+[ext_resource type="Script" path="res://scripts/BuildMenu.gd" id="6_build"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_title"]
-font_size = 48
+font_size = 44
 font_color = Color(0.1, 0.9, 1, 1)
 outline_size = 8
 outline_color = Color(0.02, 0.2, 0.4, 0.9)
@@ -15,7 +16,7 @@ shadow_size = 12
 shadow_color = Color(0, 0, 0, 0.8)
 
 [sub_resource type="LabelSettings" id="LabelSettings_hud"]
-font_size = 22
+font_size = 20
 font_color = Color(0.9, 0.95, 1, 1)
 outline_size = 4
 outline_color = Color(0.05, 0.05, 0.1, 0.9)
@@ -61,7 +62,7 @@ corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
-bg_color = Color(0.05, 0.08, 0.14, 0.92)
+bg_color = Color(0.05, 0.08, 0.14, 0.95)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -71,6 +72,42 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pause_panel"]
+bg_color = Color(0.04, 0.07, 0.13, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.8, 0.2, 0.8)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_build_panel"]
+bg_color = Color(0.04, 0.06, 0.11, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.1, 0.75, 0.95, 0.7)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_detail"]
+bg_color = Color(0.07, 0.1, 0.18, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.5, 0.8, 0.5)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -99,13 +136,20 @@ text = "SCORE: 000000"
 label_settings = SubResource("LabelSettings_hud")
 
 [node name="DistanceLabel" type="Label" parent="HUD"]
-offset_left = 540.0
+offset_left = 500.0
 offset_top = 18.0
-offset_right = 696.0
+offset_right = 630.0
 offset_bottom = 48.0
 text = "0m"
 label_settings = SubResource("LabelSettings_hud")
 horizontal_alignment = 2
+
+[node name="PauseHUDButton" type="Button" parent="HUD"]
+offset_left = 645.0
+offset_top = 14.0
+offset_right = 696.0
+offset_bottom = 46.0
+text = "||"
 
 [node name="HPBar" type="ProgressBar" parent="HUD"]
 offset_left = 24.0
@@ -130,7 +174,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="LevelLabel" type="Label" parent="HUD"]
-offset_left = 570.0
+offset_left = 540.0
 offset_top = 50.0
 offset_right = 696.0
 offset_bottom = 80.0
@@ -141,7 +185,7 @@ horizontal_alignment = 2
 [node name="ExpBar" type="ProgressBar" parent="HUD"]
 offset_left = 200.0
 offset_top = 22.0
-offset_right = 520.0
+offset_right = 490.0
 offset_bottom = 34.0
 theme_override_styles/background = SubResource("StyleBoxFlat_exp_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_exp_fg")
@@ -155,6 +199,77 @@ offset_bottom = 124.0
 text = "STOMP x2!"
 label_settings = SubResource("LabelSettings_combo")
 horizontal_alignment = 1
+
+[node name="PauseModal" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="HUD/PauseModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -180.0
+offset_right = 220.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pause_panel")
+
+[node name="Title" type="Label" parent="HUD/PauseModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -150.0
+offset_right = 180.0
+offset_bottom = -100.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "GAME PAUSED"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="PauseMenu" type="VBoxContainer" parent="HUD/PauseModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -60.0
+offset_right = 160.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="ResumeButton" type="Button" parent="HUD/PauseModal/PauseMenu"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+text = "▶ [ RESUME RUN ]"
+
+[node name="RetryButton" type="Button" parent="HUD/PauseModal/PauseMenu"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+text = "  RETRY RUN"
+
+[node name="QuitButton" type="Button" parent="HUD/PauseModal/PauseMenu"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+text = "  QUIT TO TITLE"
 
 [node name="LevelUpModal" type="Control" parent="HUD"]
 visible = false
@@ -225,7 +340,7 @@ offset_right = 250.0
 offset_bottom = 185.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "[ PRESS BUTTON TO SELECT HIGHLIGHTED ]"
+text = "[ D-PAD ◀ ▶ TO CHOOSE | A / TAP TO CONFIRM ]"
 label_settings = SubResource("LabelSettings_hud")
 horizontal_alignment = 1
 
@@ -245,9 +360,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -260.0
-offset_top = -140.0
+offset_top = -150.0
 offset_right = 260.0
-offset_bottom = -60.0
+offset_bottom = -70.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "RUN & JUMP"
@@ -262,31 +377,39 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -260.0
-offset_top = -60.0
+offset_top = -70.0
 offset_right = 260.0
-offset_bottom = -20.0
+offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "RG ROTATE SPECIAL"
 label_settings = SubResource("LabelSettings_hud")
 horizontal_alignment = 1
 
-[node name="StartHint" type="Label" parent="HUD/TitlePanel"]
+[node name="MenuContainer" type="VBoxContainer" parent="HUD/TitlePanel"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -260.0
-offset_top = 50.0
-offset_right = 260.0
-offset_bottom = 90.0
+offset_left = -180.0
+offset_top = 20.0
+offset_right = 180.0
+offset_bottom = 130.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "[ PRESS ANY BUTTON TO JUMP & START ]"
-label_settings = SubResource("LabelSettings_hud")
-horizontal_alignment = 1
+theme_override_constants/separation = 12
+
+[node name="StartButton" type="Button" parent="HUD/TitlePanel/MenuContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+text = "▶ [ START RUN ]"
+
+[node name="BuildButton" type="Button" parent="HUD/TitlePanel/MenuContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+text = "  LOADOUT & BUILD"
 
 [node name="GameOverPanel" type="Control" parent="HUD"]
 visible = false
@@ -345,6 +468,175 @@ offset_right = 200.0
 offset_bottom = 110.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "[ TAP TO RETRY ]"
+text = "[ TAP / PRESS TO RETRY ]"
 label_settings = SubResource("LabelSettings_hud")
 horizontal_alignment = 1
+
+[node name="BuildMenu" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_build")
+
+[node name="Panel" type="Panel" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_build_panel")
+
+[node name="Title" type="Label" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 35.0
+offset_right = 200.0
+offset_bottom = 75.0
+grow_horizontal = 2
+text = "LOADOUT & UPGRADES"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="CurrencyLabel" type="Label" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 70.0
+offset_right = 200.0
+offset_bottom = 100.0
+grow_horizontal = 2
+text = "CORE SHARDS: 150 💎"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="TabContainer" type="HBoxContainer" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 110.0
+offset_right = 300.0
+offset_bottom = 150.0
+grow_horizontal = 2
+alignment = 1
+
+[node name="TabWeapons" type="Button" parent="HUD/BuildMenu/TabContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "WEAPONS 🔫"
+
+[node name="TabRelics" type="Button" parent="HUD/BuildMenu/TabContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "RELICS 🛡️"
+
+[node name="TabPerks" type="Button" parent="HUD/BuildMenu/TabContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PERKS ⚡"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -190.0
+offset_right = 300.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ItemContainer" type="VBoxContainer" parent="HUD/BuildMenu/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="DetailPanel" type="Panel" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -280.0
+offset_right = 300.0
+offset_bottom = -90.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_detail")
+
+[node name="DetailIcon" type="Label" parent="HUD/BuildMenu/DetailPanel"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 64.0
+offset_bottom = 62.0
+text = "🔫"
+label_settings = SubResource("LabelSettings_combo")
+
+[node name="DetailName" type="Label" parent="HUD/BuildMenu/DetailPanel"]
+layout_mode = 0
+offset_left = 74.0
+offset_top = 16.0
+offset_right = 380.0
+offset_bottom = 46.0
+text = "PULSE LASER"
+label_settings = SubResource("LabelSettings_hud")
+
+[node name="DetailDesc" type="Label" parent="HUD/BuildMenu/DetailPanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 440.0
+offset_bottom = 120.0
+text = "高速直線ビーム。安定した連射と長射程。"
+autowrap_mode = 2
+
+[node name="ActionButton" type="Button" parent="HUD/BuildMenu/DetailPanel"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -25.0
+offset_right = -15.0
+offset_bottom = 25.0
+grow_horizontal = 0
+grow_vertical = 2
+text = "EQUIP"
+
+[node name="BackButton" type="Button" parent="HUD/BuildMenu"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -75.0
+offset_right = 120.0
+offset_bottom = -35.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "◀ [ BACK TO TITLE ]"

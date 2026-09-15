@@ -1,5 +1,4 @@
 extends StaticBody2D
-class_name Platform
 
 @export var size: Vector2 = Vector2(200, 40)
 @export var fill_color: Color = Color(0.08, 0.12, 0.22, 1.0)
@@ -8,11 +7,13 @@ class_name Platform
 var collision_shape: CollisionShape2D
 
 func _ready() -> void:
-	# コリジョン形状の動的設定
 	collision_shape = CollisionShape2D.new()
 	var rect_shape := RectangleShape2D.new()
 	rect_shape.size = size
 	collision_shape.shape = rect_shape
+	# 一方通行（上面のみコリジョン）に設定して横からの引っかかり・左への押し出しを防止
+	collision_shape.one_way_collision = true
+	collision_shape.one_way_collision_margin = 8.0
 	add_child(collision_shape)
 	queue_redraw()
 
@@ -24,13 +25,9 @@ func set_platform_size(new_size: Vector2) -> void:
 
 func _draw() -> void:
 	var rect := Rect2(-size / 2.0, size)
-	# 背景
 	draw_rect(rect, fill_color, true)
-	# 上面ハイライト（着地ガイドライン）
 	draw_line(Vector2(-size.x/2, -size.y/2), Vector2(size.x/2, -size.y/2), border_color, 3.0)
-	# 枠線
 	draw_rect(rect, Color(border_color.r, border_color.g, border_color.b, 0.4), false, 1.5)
-	# グリッド装飾ライン
 	var step := 30.0
 	var x := -size.x/2 + step
 	while x < size.x/2:
