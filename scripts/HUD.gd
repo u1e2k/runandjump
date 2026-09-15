@@ -14,6 +14,7 @@ signal quit_to_title_requested
 @onready var hp_bar: ProgressBar = $HPBar
 @onready var hp_label: Label = $HPBar/HPText
 @onready var level_label: Label = $LevelLabel
+@onready var sp_label: Label = $SPLabel
 @onready var exp_bar: ProgressBar = $ExpBar
 
 @onready var title_panel: Control = $TitlePanel
@@ -23,8 +24,10 @@ signal quit_to_title_requested
 @onready var game_over_panel: Control = $GameOverPanel
 @onready var retry_hint_label: Label = $GameOverPanel/RetryHint
 
-# レベルアップスキル選択UI
+# レベルアップ/アップグレードモーダルUI
 @onready var level_up_modal: Control = $LevelUpModal
+@onready var modal_title: Label = $LevelUpModal/Title
+@onready var modal_sp_count_label: Label = $LevelUpModal/SPCountLabel
 @onready var card_container: HBoxContainer = $LevelUpModal/CardContainer
 
 # ポーズモーダルUI
@@ -159,9 +162,9 @@ func update_title_menu() -> void:
 		menu_build_btn.modulate = Color(1.3, 1.3, 1.3, 1.0)
 		menu_build_btn.text = "▶ [ LOADOUT & BUILD ]"
 
-func update_stats(score: int, distance: float) -> void:
+func update_stats(score: int, distance: float, section: int, target_dist: float) -> void:
 	score_label.text = "SCORE: %06d" % score
-	distance_label.text = "%dm" % int(distance)
+	distance_label.text = "SEC.%d  %dm" % [section, int(distance)]
 
 func update_hp(current: int, max_hp: int) -> void:
 	hp_bar.max_value = max_hp
@@ -172,6 +175,14 @@ func update_exp(current: int, target: int, level: int) -> void:
 	level_label.text = "LV.%d" % level
 	exp_bar.max_value = target
 	exp_bar.value = current
+
+func update_sp(sp_points: int) -> void:
+	if sp_points > 0:
+		sp_label.text = "⚡ SP: %d" % sp_points
+		sp_label.modulate = Color(1.0, 0.9, 0.2, 1.0)
+	else:
+		sp_label.text = "⚡ SP: 0"
+		sp_label.modulate = Color(0.6, 0.7, 0.8, 0.7)
 
 func add_combo() -> void:
 	combo_count += 1
@@ -196,11 +207,14 @@ func hide_title() -> void:
 	title_panel.visible = false
 	hud_pause_button.visible = true
 
-func show_level_up(skills: Array) -> void:
+func show_upgrade_station(skills: Array, remaining_sp: int) -> void:
 	is_leveling_up = true
 	current_offered_skills = skills
 	selected_card_index = 0
 	level_up_modal.visible = true
+	
+	modal_title.text = "UPGRADE STATION"
+	modal_sp_count_label.text = "AVAILABLE SP: %d ⚡" % remaining_sp
 	
 	for child in card_container.get_children():
 		child.queue_free()
@@ -211,6 +225,10 @@ func show_level_up(skills: Array) -> void:
 		card_container.add_child(card)
 		
 	update_card_highlights()
+
+func hide_upgrade_station() -> void:
+	is_leveling_up = false
+	level_up_modal.visible = false
 
 func create_skill_card(index: int, skill: Dictionary) -> Button:
 	var btn := Button.new()
@@ -271,8 +289,6 @@ func confirm_selection() -> void:
 		return
 	if selected_card_index < current_offered_skills.size():
 		var chosen: Dictionary = current_offered_skills[selected_card_index]
-		is_leveling_up = false
-		level_up_modal.visible = false
 		skill_selected.emit(chosen.get("id", ""))
 
 func show_game_over(final_score: int, high_score: int, earned_coins: int) -> void:

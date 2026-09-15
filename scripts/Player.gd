@@ -6,7 +6,7 @@ signal bounced
 signal landed
 signal damaged(current_hp: int, max_hp: int)
 signal exp_gained(current: int, target: int, level: int)
-signal leveled_up(new_level: int)
+signal sp_gained(new_sp: int, current_level: int)
 signal shoot_bullet(pos: Vector2, dir: Vector2, wtype: String, dmg: int)
 signal shockwave_triggered(pos: Vector2)
 
@@ -34,10 +34,11 @@ var current_hp: int = 100
 var invincible_timer: float = 0.0
 const INVINCIBLE_DURATION: float = 1.0
 
-# レベル & EXP
+# レベル & EXP & SPポイント
 var level: int = 1
 var current_exp: int = 0
 var exp_to_next_level: int = 35
+var sp_points: int = 0
 
 # 装備・パーク
 var current_weapon: String = "pulse_laser"
@@ -61,6 +62,7 @@ var squash_stretch: Vector2 = Vector2(1.0, 1.0)
 var rotation_angle: float = 0.0
 var trail_positions: Array[Vector2] = []
 const MAX_TRAIL: int = 8
+var levelup_pop_timer: float = 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -114,11 +116,13 @@ func reset(start_pos: Vector2, build_mgr = null) -> void:
 	level = 1
 	current_exp = 0
 	exp_to_next_level = 35
+	sp_points = 0
 	skills.clear()
 	max_air_jumps = 1
 	air_jumps_left = 1
 	has_stomp_shock = false
 	kill_counter = 0
+	levelup_pop_timer = 0.0
 	
 	if build_mgr:
 		setup_loadout(build_mgr)
@@ -135,6 +139,7 @@ func reset(start_pos: Vector2, build_mgr = null) -> void:
 	visible = true
 	damaged.emit(current_hp, max_hp)
 	exp_gained.emit(current_exp, exp_to_next_level, level)
+	sp_gained.emit(sp_points, level)
 
 func _physics_process(delta: float) -> void:
 	if not is_alive:
@@ -142,6 +147,9 @@ func _physics_process(delta: float) -> void:
 		
 	if invincible_timer > 0.0:
 		invincible_timer -= delta
+		
+	if levelup_pop_timer > 0.0:
+		levelup_pop_timer -= delta
 		
 	trail_positions.push_front(global_position)
 	if trail_positions.size() > MAX_TRAIL:
@@ -181,7 +189,6 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_released("jump") and velocity.y < MIN_JUMP_VELOCITY:
 		velocity.y = MIN_JUMP_VELOCITY
 		
-	# X位置の自動復元（左に押し流されないようTARGET_Xへスムーズに補正）
 	velocity.x = (TARGET_X - global_position.x) * 12.0
 	
 	move_and_slide()
@@ -240,13 +247,18 @@ func take_damage(amount: int = 20) -> void:
 	if current_hp <= 0:
 		die()
 
+func heal(amount: int) -> void:
+	if not is_alive:
+		return
+	current_hp = min(max_hp, current_hp + amount)
+	damaged.emit(current_hp, max_hp)
+
 func on_enemy_killed() -> void:
 	if current_accessory == "vampire_ring":
 		kill_counter += 1
 		if kill_counter >= 5:
 			kill_counter = 0
-			current_hp = min(max_hp, current_hp + 6)
-			damaged.emit(current_hp, max_hp)
+			heal(6)
 
 func rescue_from_fall() -> void:
 	if not is_alive:
@@ -264,8 +276,10 @@ func add_exp(amount: int) -> void:
 	if current_exp >= exp_to_next_level:
 		current_exp -= exp_to_next_level
 		level += 1
-		exp_to_next_level = int(float(exp_to_next_level) * 1.35)
-		leveled_up.emit(level)
+		sp_points += 1 # SPポイントを加算（ゲームは止めない！）
+		exp_to_next_level = int(float(exp_to_next_level) * 1.3)
+		levelup_pop_timer = 1.2
+		sp_gained.emit(sp_points, level)
 	exp_gained.emit(current_exp, exp_to_next_level, level)
 
 func get_magnet_range() -> float:
@@ -326,3 +340,8 @@ func _draw() -> void:
 	
 	if has_spike_boots:
 		draw_line(Vector2(-size.x/2, size.y/2), Vector2(size.x/2, size.y/2), Color(1.0, 0.9, 0.2, 1.0), 3.0)
+		
+	# レベルアップ時のポップエフェクト
+	if levelup_pop_timer > 0.0:
+		var alpha_pop: float = levelup_pop_timer / 1.2
+		draw_arc(Vector2.ZERO, 35.0 + (1.2 - levelup_pop_timer) * 30.0, 0, TAU, 24, Color(1.0, 0.85, 0.2, alpha_pop), 2.5)

@@ -6,7 +6,7 @@ const ProjectileScript = preload("res://scripts/Projectile.gd")
 const ExpGemScript = preload("res://scripts/ExpGem.gd")
 const BuildManagerScript = preload("res://scripts/BuildManager.gd")
 
-enum State { TITLE, BUILD_MENU, PLAYING, LEVEL_UP, PAUSED, GAME_OVER }
+enum State { TITLE, BUILD_MENU, PLAYING, UPGRADE_STATION, PAUSED, GAME_OVER }
 var current_state: State = State.TITLE
 
 @onready var player: CharacterBody2D = $Player
@@ -51,13 +51,14 @@ func _ready() -> void:
 	player.died.connect(_on_player_died)
 	player.damaged.connect(_on_player_damaged)
 	player.exp_gained.connect(_on_player_exp_gained)
-	player.leveled_up.connect(_on_player_leveled_up)
+	player.sp_gained.connect(_on_player_sp_gained)
 	player.shoot_bullet.connect(_on_player_shoot_bullet)
 	player.shockwave_triggered.connect(_on_player_shockwave)
 	
 	# スポナーシグナル接続
 	spawner.enemy_stomped.connect(_on_enemy_stomped)
 	spawner.enemy_defeated.connect(_on_enemy_defeated)
+	spawner.checkpoint_reached.connect(_on_checkpoint_reached)
 	
 	# HUDシグナル接続
 	hud.skill_selected.connect(_on_skill_selected)
@@ -103,7 +104,7 @@ func _process(delta: float) -> void:
 		State.PLAYING:
 			distance += spawner.current_scroll_speed * delta * 0.05
 			score += int(spawner.current_scroll_speed * delta * 0.1)
-			hud.update_stats(score, distance)
+			hud.update_stats(score, distance, spawner.current_section, spawner.next_checkpoint_dist)
 			
 			if player.global_position.y > 730.0:
 				player.rescue_from_fall()
@@ -123,6 +124,7 @@ func start_game() -> void:
 	hud.hide_title()
 	hud.hide_pause()
 	hud.hide_game_over()
+	hud.hide_upgrade_station()
 	build_menu.close()
 	player.reset(PLAYER_START_POS, build_manager)
 	spawner.start_run()
@@ -192,18 +194,38 @@ func _on_player_exp_gained(current: int, target: int, level: int) -> void:
 	hud.update_exp(current, target, level)
 	sfx_exp.play()
 
-func _on_player_leveled_up(new_level: int) -> void:
+func _on_player_sp_gained(new_sp: int, current_level: int) -> void:
+	# 走行を止めずにSPストック＆SE再生！
 	sfx_levelup.play()
-	current_state = State.LEVEL_UP
-	get_tree().paused = true
+	hud.update_sp(new_sp)
+
+func _on_checkpoint_reached(completed_section: int) -> void:
+	# チェックポイント到達：HP小回復
+	player.heal(20)
+	trigger_shake(6.0)
 	
+	if player.sp_points > 0:
+		current_state = State.UPGRADE_STATION
+		get_tree().paused = true
+		show_next_skill_offer()
+
+func show_next_skill_offer() -> void:
 	var offered := SkillDatabaseScript.get_random_skills(3, player.skills)
-	hud.show_level_up(offered)
+	hud.show_upgrade_station(offered, player.sp_points)
 
 func _on_skill_selected(skill_id: String) -> void:
 	player.apply_skill(skill_id)
-	get_tree().paused = false
-	current_state = State.PLAYING
+	player.sp_points = max(0, player.sp_points - 1)
+	hud.update_sp(player.sp_points)
+	
+	if player.sp_points > 0:
+		# まだSPが残っていれば続けて選択！
+		show_next_skill_offer()
+	else:
+		# SPを使い切ったら次セクションへ出発！
+		hud.hide_upgrade_station()
+		get_tree().paused = false
+		current_state = State.PLAYING
 
 func _on_player_shoot_bullet(pos: Vector2, dir: Vector2, wtype: String, dmg: int) -> void:
 	var bullet: Area2D = ProjectileScript.new()

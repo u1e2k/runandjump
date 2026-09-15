@@ -2,6 +2,7 @@ extends Node2D
 
 signal enemy_stomped(enemy: Node2D)
 signal enemy_defeated(pos: Vector2)
+signal checkpoint_reached(section_index: int)
 
 const PlatformScript = preload("res://scripts/Platform.gd")
 const SpikeScript = preload("res://scripts/Spike.gd")
@@ -15,6 +16,12 @@ var spawn_x: float = 0.0
 const CHUNK_WIDTH: float = 720.0
 var active_chunks: Array[Node2D] = []
 
+# セクション管理 (250m ごとにチェックポイント)
+var total_distance_traveled: float = 0.0
+var next_checkpoint_dist: float = 250.0
+var current_section: int = 1
+var checkpoint_spawned: bool = false
+
 func _ready() -> void:
 	current_scroll_speed = base_scroll_speed
 
@@ -23,6 +30,10 @@ func start_run() -> void:
 	current_scroll_speed = base_scroll_speed
 	spawn_x = 0.0
 	is_scrolling = true
+	total_distance_traveled = 0.0
+	next_checkpoint_dist = 250.0
+	current_section = 1
+	checkpoint_spawned = false
 	
 	spawn_start_chunk()
 	for i in range(2):
@@ -35,14 +46,20 @@ func _process(delta: float) -> void:
 	if not is_scrolling:
 		return
 		
-	current_scroll_speed = min(current_scroll_speed + delta * 2.0, 520.0)
+	current_scroll_speed = min(current_scroll_speed + delta * 1.5, 500.0)
 	var move_dist := current_scroll_speed * delta
+	total_distance_traveled += move_dist * 0.05
 	
 	for chunk in active_chunks:
 		chunk.position.x -= move_dist
 		
 	spawn_x -= move_dist
 	
+	# チェックポイント到達判定
+	if not checkpoint_spawned and total_distance_traveled >= next_checkpoint_dist:
+		checkpoint_spawned = true
+		spawn_checkpoint_chunk()
+		
 	if spawn_x < 1440.0:
 		spawn_random_chunk()
 		
@@ -72,6 +89,32 @@ func spawn_start_chunk() -> void:
 	plat.size = Vector2(CHUNK_WIDTH + 100, 60)
 	plat.position = Vector2(CHUNK_WIDTH / 2.0, 580)
 	chunk.add_child(plat)
+
+func spawn_checkpoint_chunk() -> void:
+	var chunk := create_chunk_root()
+	# 安全なロング足場
+	var plat: StaticBody2D = PlatformScript.new()
+	plat.size = Vector2(CHUNK_WIDTH + 200, 60)
+	plat.position = Vector2(CHUNK_WIDTH / 2.0, 580)
+	chunk.add_child(plat)
+	
+	# チェックポイントエリア（トリガー）
+	var gate_area := Area2D.new()
+	gate_area.position = Vector2(300.0, 500.0)
+	var col := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(40.0, 180.0)
+	col.shape = rect
+	gate_area.add_child(col)
+	
+	gate_area.body_entered.connect(func(body):
+		if body.name == "Player":
+			next_checkpoint_dist += 250.0
+			current_section += 1
+			checkpoint_spawned = false
+			checkpoint_reached.emit(current_section - 1)
+	)
+	chunk.add_child(gate_area)
 
 func spawn_random_chunk() -> void:
 	var chunk := create_chunk_root()
