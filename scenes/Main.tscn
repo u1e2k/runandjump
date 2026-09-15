@@ -1,0 +1,350 @@
+[gd_scene load_steps=15 format=3 uid="uid://c6q82l8k3j0a"]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/LevelSpawner.gd" id="2_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/Player.tscn" id="3_player"]
+[ext_resource type="Script" path="res://scripts/HUD.gd" id="4_hud"]
+[ext_resource type="Script" path="res://scripts/GridBackground.gd" id="5_grid"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font_size = 48
+font_color = Color(0.1, 0.9, 1, 1)
+outline_size = 8
+outline_color = Color(0.02, 0.2, 0.4, 0.9)
+shadow_size = 12
+shadow_color = Color(0, 0, 0, 0.8)
+
+[sub_resource type="LabelSettings" id="LabelSettings_hud"]
+font_size = 22
+font_color = Color(0.9, 0.95, 1, 1)
+outline_size = 4
+outline_color = Color(0.05, 0.05, 0.1, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_hp"]
+font_size = 14
+font_color = Color(1, 1, 1, 1)
+outline_size = 3
+outline_color = Color(0.2, 0, 0.05, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_combo"]
+font_size = 28
+font_color = Color(1, 0.8, 0.2, 1)
+outline_size = 6
+outline_color = Color(0.4, 0.2, 0, 0.9)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_bg"]
+bg_color = Color(0.2, 0.05, 0.1, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_fg"]
+bg_color = Color(1, 0.15, 0.35, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_exp_bg"]
+bg_color = Color(0.1, 0.15, 0.25, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_exp_fg"]
+bg_color = Color(0.2, 0.9, 0.5, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+bg_color = Color(0.05, 0.08, 0.14, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.8, 1, 0.8)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="GridBackground" type="Node2D" parent="."]
+script = ExtResource("5_grid")
+
+[node name="LevelSpawner" type="Node2D" parent="."]
+script = ExtResource("2_spawner")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(160, 480)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("4_hud")
+
+[node name="ScoreLabel" type="Label" parent="HUD"]
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 220.0
+offset_bottom = 48.0
+text = "SCORE: 000000"
+label_settings = SubResource("LabelSettings_hud")
+
+[node name="DistanceLabel" type="Label" parent="HUD"]
+offset_left = 540.0
+offset_top = 18.0
+offset_right = 696.0
+offset_bottom = 48.0
+text = "0m"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 2
+
+[node name="HPBar" type="ProgressBar" parent="HUD"]
+offset_left = 24.0
+offset_top = 54.0
+offset_right = 220.0
+offset_bottom = 74.0
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_fg")
+value = 100.0
+show_percentage = false
+
+[node name="HPText" type="Label" parent="HUD/HPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "HP: 100 / 100"
+label_settings = SubResource("LabelSettings_hp")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LevelLabel" type="Label" parent="HUD"]
+offset_left = 570.0
+offset_top = 50.0
+offset_right = 696.0
+offset_bottom = 80.0
+text = "LV.1"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 2
+
+[node name="ExpBar" type="ProgressBar" parent="HUD"]
+offset_left = 200.0
+offset_top = 22.0
+offset_right = 520.0
+offset_bottom = 34.0
+theme_override_styles/background = SubResource("StyleBoxFlat_exp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_exp_fg")
+show_percentage = false
+
+[node name="ComboLabel" type="Label" parent="HUD"]
+offset_left = 240.0
+offset_top = 80.0
+offset_right = 480.0
+offset_bottom = 124.0
+text = "STOMP x2!"
+label_settings = SubResource("LabelSettings_combo")
+horizontal_alignment = 1
+
+[node name="LevelUpModal" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="HUD/LevelUpModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -200.0
+offset_right = 340.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="Title" type="Label" parent="HUD/LevelUpModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -180.0
+offset_right = 200.0
+offset_bottom = -135.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "LEVEL UP!"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="CardContainer" type="HBoxContainer" parent="HUD/LevelUpModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -120.0
+offset_right = 320.0
+offset_bottom = 140.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="SelectHint" type="Label" parent="HUD/LevelUpModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = 150.0
+offset_right = 250.0
+offset_bottom = 185.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "[ PRESS BUTTON TO SELECT HIGHLIGHTED ]"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="TitlePanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="HUD/TitlePanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -140.0
+offset_right = 260.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "RUN & JUMP"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="SubTitle" type="Label" parent="HUD/TitlePanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -60.0
+offset_right = 260.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "RG ROTATE SPECIAL"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="StartHint" type="Label" parent="HUD/TitlePanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = 50.0
+offset_right = 260.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "[ PRESS ANY BUTTON TO JUMP & START ]"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="GameOverPanel" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GameOverText" type="Label" parent="HUD/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -120.0
+offset_right = 200.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "GAME OVER"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="ScoreText" type="Label" parent="HUD/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -30.0
+offset_right = 200.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "SCORE: 0
+BEST: 0"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+
+[node name="RetryHint" type="Label" parent="HUD/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 70.0
+offset_right = 200.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "[ TAP TO RETRY ]"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1

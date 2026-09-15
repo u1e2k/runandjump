@@ -1,0 +1,43 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+
+# Godot-specific exports & credentials
+export_credentials.cfg
+*.pck
+
+# Android / Gradle build folders (if gradle build is used)
+android/build/
+android/.gradle/
+
+# Exported binaries & archives
+/build/
+*.apk
+*.aab
+*.exe
+*.zip
+*.tar.gz
+*.dmg
+*.wasm
+*.html
+*.js
+
+# Keystores & sensitive credentials
+*.keystore
+*.jks
+debug.keystore
+
+# Mono / C# (if used in future)
+.mono/
+data_*/
+mono_crash.*.json
+[Bb]in/
+[Oo]bj/
+
+# OS / Editor temporary & cache files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+.vscode/
+.idea/
