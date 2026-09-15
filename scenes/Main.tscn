@@ -197,6 +197,14 @@ offset_bottom = 78.0
 text = "⚡ SP: 0"
 label_settings = SubResource("LabelSettings_hud")
 
+[node name="CoinLabel" type="Label" parent="HUD"]
+offset_left = 24.0
+offset_top = 80.0
+offset_right = 160.0
+offset_bottom = 110.0
+text = "💎 0"
+label_settings = SubResource("LabelSettings_hud")
+
 [node name="ComboLabel" type="Label" parent="HUD"]
 offset_left = 240.0
 offset_top = 80.0

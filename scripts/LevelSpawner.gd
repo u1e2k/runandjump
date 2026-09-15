@@ -2,12 +2,15 @@ extends Node2D
 
 signal enemy_stomped(enemy: Node2D)
 signal enemy_defeated(pos: Vector2)
+signal enemy_bullet_fired(pos: Vector2, dir: Vector2)
 signal checkpoint_reached(section_index: int)
 signal zone_changed(zone_index: int)
+signal coin_collected(value: int)
 
 const PlatformScript = preload("res://scripts/Platform.gd")
 const SpikeScript = preload("res://scripts/Spike.gd")
 const EnemyScript = preload("res://scripts/Enemy.gd")
+const CoinScript = preload("res://scripts/Coin.gd")
 
 @export var base_scroll_speed: float = 340.0
 var current_scroll_speed: float = 340.0
@@ -16,6 +19,7 @@ var spawn_x: float = 0.0
 
 const CHUNK_WIDTH: float = 720.0
 var active_chunks: Array[Node2D] = []
+var target_player: CharacterBody2D = null
 
 # セクション管理 (500m ごとにチェックポイント)
 const CHECKPOINT_INTERVAL: float = 500.0
@@ -111,15 +115,16 @@ func get_platform_colors_for_zone() -> Dictionary:
 func spawn_start_chunk() -> void:
 	var chunk := create_chunk_root()
 	var cols := get_platform_colors_for_zone()
-	var plat := create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH + 100, cols.fill, cols.border)
+	create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH + 100, cols.fill, cols.border)
+	create_coin_line(chunk, Vector2(250, 480), 5, 45.0)
 
 func spawn_checkpoint_chunk() -> void:
 	var chunk := create_chunk_root()
 	
-	# 安全なゴールドネオンのロング足場
 	var gold_fill := Color(0.15, 0.12, 0.04)
 	var gold_border := Color(1.0, 0.85, 0.2)
-	var plat := create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH + 200, gold_fill, gold_border)
+	create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH + 200, gold_fill, gold_border)
+	create_coin_arch(chunk, Vector2(120, 480), 7, 70.0)
 	
 	# ランドマーク：巨大ネオンゲート & 天空光柱（レーザービーム）
 	var gate_visual := CheckpointGateVisual.new()
@@ -150,24 +155,27 @@ func spawn_random_chunk() -> void:
 	var f_col: Color = cols.fill
 	var b_col: Color = cols.border
 	
-	# 12種類の多彩なチャンクパターン
-	var pattern := randi() % 12
+	# 24種類の超多彩なチャンクパターン！
+	var pattern := randi() % 24
 	
 	match pattern:
-		0: # フラット＆パトロール敵
+		0: # フラット＆パトロール敵＆コインライン
 			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH + 20, f_col, b_col)
 			create_enemy(chunk, Vector2(420, 536), "patrol")
+			create_coin_line(chunk, Vector2(200, 500), 4, 40.0)
 			
-		1: # 穴開き＆トゲトラップ
+		1: # 穴開き＆トゲトラップ＆コインアーチ
 			create_platform(chunk, Vector2(0, 580), 300, f_col, b_col)
 			create_spike(chunk, Vector2(230, 540))
+			create_coin_arch(chunk, Vector2(180, 500), 5, 60.0)
 			create_platform(chunk, Vector2(380, 580), 340, f_col, b_col)
 			create_enemy(chunk, Vector2(520, 536), "patrol")
 			
 		2: # 2段ステップ＆ホッパー敵
 			create_platform(chunk, Vector2(0, 580), 220, f_col, b_col)
 			create_platform(chunk, Vector2(280, 460), 200, f_col, b_col)
-			create_enemy(chunk, Vector2(300, 416), "hopper")
+			create_coin_line(chunk, Vector2(300, 400), 3, 35.0)
+			create_enemy(chunk, Vector2(320, 416), "hopper")
 			create_platform(chunk, Vector2(520, 580), 200, f_col, b_col)
 			
 		3: # トゲ地帯＆高所空中足場ルート
@@ -175,65 +183,150 @@ func spawn_random_chunk() -> void:
 			for s in range(4):
 				create_spike(chunk, Vector2(210 + s * 45, 620))
 			create_platform(chunk, Vector2(220, 420), 280, f_col, b_col)
+			create_coin_line(chunk, Vector2(260, 360), 4, 40.0)
 			create_enemy(chunk, Vector2(340, 376), "hopper")
 			create_platform(chunk, Vector2(500, 580), 220, f_col, b_col)
 			
-		4: # 2階建てビル屋上
+		4: # 2階建てビル屋上＆ドローン
 			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
 			create_platform(chunk, Vector2(240, 430), 240, f_col, b_col)
 			create_enemy(chunk, Vector2(260, 386), "patrol")
-			create_enemy(chunk, Vector2(540, 536), "patrol")
+			create_enemy(chunk, Vector2(540, 380), "drone")
+			create_coin_line(chunk, Vector2(260, 370), 3, 40.0)
 			
 		5: # ジャンプパッドギミック（大ジャンプで高所へ飛べる！）
 			create_platform(chunk, Vector2(0, 580), 240, f_col, b_col)
 			create_jump_pad(chunk, Vector2(180, 550))
+			create_coin_arch(chunk, Vector2(190, 480), 6, 90.0)
 			create_platform(chunk, Vector2(260, 360), 240, f_col, b_col)
 			create_enemy(chunk, Vector2(360, 316), "patrol")
 			create_platform(chunk, Vector2(480, 580), 240, f_col, b_col)
 			
-		6: # 3段連続ステップアップ（リズムアクション）
+		6: # 3段連続ステップアップ＆コイン
 			create_platform(chunk, Vector2(0, 580), 180, f_col, b_col)
 			create_platform(chunk, Vector2(220, 500), 140, f_col, b_col)
+			create_coin(chunk, Vector2(280, 440))
 			create_platform(chunk, Vector2(400, 420), 140, f_col, b_col)
+			create_coin(chunk, Vector2(460, 360))
 			create_platform(chunk, Vector2(570, 580), 150, f_col, b_col)
 			create_enemy(chunk, Vector2(400, 376), "hopper")
 			
-		7: # 連続ホッパーラッシュ地帯
-			create_platform(chunk, Vector2(0, 580), 320, f_col, b_col)
-			create_enemy(chunk, Vector2(200, 536), "hopper")
-			create_enemy(chunk, Vector2(290, 536), "hopper")
-			create_platform(chunk, Vector2(380, 580), 340, f_col, b_col)
-			create_spike(chunk, Vector2(460, 540))
+		7: # 突進ハウンド（rusher）初登場エリア！
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_enemy(chunk, Vector2(580, 536), "rusher")
+			create_coin_line(chunk, Vector2(200, 500), 5, 45.0)
 			
-		8: # スモールアイランド連続ジャンプ
+		8: # スモールアイランド連続ジャンプ＆空中コイン
 			create_platform(chunk, Vector2(0, 580), 140, f_col, b_col)
 			create_platform(chunk, Vector2(190, 530), 110, f_col, b_col)
+			create_coin(chunk, Vector2(240, 470))
 			create_platform(chunk, Vector2(350, 480), 110, f_col, b_col)
+			create_coin(chunk, Vector2(400, 420))
 			create_platform(chunk, Vector2(510, 530), 110, f_col, b_col)
 			create_platform(chunk, Vector2(650, 580), 100, f_col, b_col)
 			
-		9: # ジャンプパッド＋長距離谷越え
+		9: # ジャンプパッド＋長距離トゲ谷越え
 			create_platform(chunk, Vector2(0, 580), 200, f_col, b_col)
 			create_jump_pad(chunk, Vector2(150, 550))
+			create_coin_arch(chunk, Vector2(180, 480), 8, 120.0)
 			for s in range(6):
 				create_spike(chunk, Vector2(240 + s * 45, 630))
 			create_platform(chunk, Vector2(500, 580), 220, f_col, b_col)
 			create_enemy(chunk, Vector2(580, 536), "patrol")
 			
-		10: # 高低差の交差ルート（上：安全・下：トゲ）
-			create_platform(chunk, Vector2(0, 580), 180, f_col, b_col)
-			create_platform(chunk, Vector2(180, 400), 380, f_col, b_col)
-			create_enemy(chunk, Vector2(320, 356), "patrol")
-			create_enemy(chunk, Vector2(450, 356), "patrol")
-			create_spike(chunk, Vector2(300, 600))
-			create_spike(chunk, Vector2(420, 600))
-			create_platform(chunk, Vector2(550, 580), 170, f_col, b_col)
-			
-		11: # 密集防衛ライン（敵3体）
+		10: # タレット砲台（turret）設置地帯！
 			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
-			create_enemy(chunk, Vector2(220, 536), "patrol")
-			create_enemy(chunk, Vector2(380, 536), "hopper")
-			create_enemy(chunk, Vector2(560, 536), "patrol")
+			create_enemy(chunk, Vector2(550, 536), "turret")
+			create_coin_arch(chunk, Vector2(250, 500), 5, 60.0)
+			
+		11: # シールド兵（shield_heavy）防衛ライン！
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_enemy(chunk, Vector2(480, 536), "shield_heavy")
+			create_coin_line(chunk, Vector2(180, 500), 4, 40.0)
+			
+		12: # 飛行ドローン編隊（2体）迎撃地帯
+			create_platform(chunk, Vector2(0, 580), 320, f_col, b_col)
+			create_enemy(chunk, Vector2(300, 360), "drone")
+			create_enemy(chunk, Vector2(460, 320), "drone")
+			create_platform(chunk, Vector2(400, 580), 320, f_col, b_col)
+			create_coin_arch(chunk, Vector2(200, 460), 6, 80.0)
+			
+		13: # タレット＋高所ステップ
+			create_platform(chunk, Vector2(0, 580), 240, f_col, b_col)
+			create_platform(chunk, Vector2(260, 440), 220, f_col, b_col)
+			create_enemy(chunk, Vector2(360, 396), "turret")
+			create_platform(chunk, Vector2(500, 580), 220, f_col, b_col)
+			create_coin_line(chunk, Vector2(280, 380), 3, 40.0)
+			
+		14: # 上段コインボーナスロード vs 下段平坦
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_platform(chunk, Vector2(160, 380), 400, f_col, b_col)
+			create_coin_line(chunk, Vector2(200, 320), 6, 45.0)
+			create_enemy(chunk, Vector2(360, 336), "patrol")
+			create_enemy(chunk, Vector2(400, 536), "rusher")
+			
+		15: # 連続ラッシュ（ハウンド＋ホッパー）
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_enemy(chunk, Vector2(350, 536), "hopper")
+			create_enemy(chunk, Vector2(580, 536), "rusher")
+			create_coin_arch(chunk, Vector2(220, 500), 5, 50.0)
+			
+		16: # ダブルジャンプパッド空中回廊
+			create_platform(chunk, Vector2(0, 580), 160, f_col, b_col)
+			create_jump_pad(chunk, Vector2(120, 550))
+			create_platform(chunk, Vector2(240, 380), 120, f_col, b_col)
+			create_jump_pad(chunk, Vector2(290, 350))
+			create_coin_arch(chunk, Vector2(200, 320), 6, 90.0)
+			create_platform(chunk, Vector2(500, 580), 220, f_col, b_col)
+			
+		17: # シールド兵＋ドローンの複合戦
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_enemy(chunk, Vector2(380, 360), "drone")
+			create_enemy(chunk, Vector2(520, 536), "shield_heavy")
+			create_coin_line(chunk, Vector2(200, 500), 4, 40.0)
+			
+		18: # トゲ谷＋空中連続ステップ＋大量コイン
+			create_platform(chunk, Vector2(0, 580), 140, f_col, b_col)
+			for s in range(5):
+				create_spike(chunk, Vector2(180 + s * 45, 630))
+			create_platform(chunk, Vector2(220, 460), 100, f_col, b_col)
+			create_coin(chunk, Vector2(260, 400))
+			create_platform(chunk, Vector2(360, 400), 100, f_col, b_col)
+			create_coin(chunk, Vector2(400, 340))
+			create_platform(chunk, Vector2(500, 580), 220, f_col, b_col)
+			
+		19: # タレット2連射撃地帯
+			create_platform(chunk, Vector2(0, 580), 300, f_col, b_col)
+			create_enemy(chunk, Vector2(240, 536), "turret")
+			create_platform(chunk, Vector2(380, 580), 340, f_col, b_col)
+			create_enemy(chunk, Vector2(580, 536), "turret")
+			create_coin_arch(chunk, Vector2(260, 480), 6, 70.0)
+			
+		20: # コインフィーバーロード（大量コイン12枚）
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_coin_line(chunk, Vector2(100, 500), 6, 40.0)
+			create_coin_line(chunk, Vector2(380, 440), 6, 40.0)
+			create_enemy(chunk, Vector2(600, 536), "patrol")
+			
+		21: # 空中ドローン乱舞（3体）
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_enemy(chunk, Vector2(240, 380), "drone")
+			create_enemy(chunk, Vector2(420, 340), "drone")
+			create_enemy(chunk, Vector2(580, 380), "drone")
+			create_coin_arch(chunk, Vector2(200, 460), 7, 80.0)
+			
+		22: # ハウンド突進＋ジャンプパッド回避
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_jump_pad(chunk, Vector2(200, 550))
+			create_enemy(chunk, Vector2(550, 536), "rusher")
+			create_coin_arch(chunk, Vector2(210, 450), 5, 80.0)
+			
+		23: # 全軍ラッシュ（シールド＋タレット＋ドローン）
+			create_platform(chunk, Vector2(0, 580), CHUNK_WIDTH, f_col, b_col)
+			create_enemy(chunk, Vector2(300, 360), "drone")
+			create_enemy(chunk, Vector2(450, 536), "shield_heavy")
+			create_enemy(chunk, Vector2(600, 536), "turret")
+			create_coin_line(chunk, Vector2(180, 500), 5, 45.0)
 
 func create_platform(parent: Node2D, local_pos: Vector2, width: float, fill_c: Color = Color(0.08, 0.12, 0.22), border_c: Color = Color(0.1, 0.7, 0.9)) -> StaticBody2D:
 	var plat: StaticBody2D = PlatformScript.new()
@@ -266,9 +359,9 @@ func create_enemy(parent: Node2D, local_pos: Vector2, type: String = "patrol") -
 	stomp_area.name = "StompArea"
 	var stomp_col := CollisionShape2D.new()
 	var stomp_rect := RectangleShape2D.new()
-	stomp_rect.size = Vector2(24, 10)
+	stomp_rect.size = Vector2(28, 12)
 	stomp_col.shape = stomp_rect
-	stomp_col.position = Vector2(0, -14)
+	stomp_col.position = Vector2(0, -16)
 	stomp_area.add_child(stomp_col)
 	stomp_area.body_entered.connect(enemy.on_stomp_area_body_entered)
 	enemy.add_child(stomp_area)
@@ -277,7 +370,7 @@ func create_enemy(parent: Node2D, local_pos: Vector2, type: String = "patrol") -
 	hit_area.name = "HitArea"
 	var hit_col := CollisionShape2D.new()
 	var hit_rect := RectangleShape2D.new()
-	hit_rect.size = Vector2(22, 18)
+	hit_rect.size = Vector2(24, 20)
 	hit_col.shape = hit_rect
 	hit_col.position = Vector2(0, 4)
 	hit_area.add_child(hit_col)
@@ -286,6 +379,7 @@ func create_enemy(parent: Node2D, local_pos: Vector2, type: String = "patrol") -
 	
 	enemy.stomped.connect(_on_enemy_stomped)
 	enemy.defeated.connect(_on_enemy_defeated)
+	enemy.enemy_shoot.connect(_on_enemy_shoot)
 	parent.add_child(enemy)
 	return enemy
 
@@ -295,18 +389,51 @@ func create_jump_pad(parent: Node2D, local_pos: Vector2) -> Area2D:
 	parent.add_child(pad)
 	return pad
 
+func create_coin(parent: Node2D, local_pos: Vector2) -> Area2D:
+	var coin: Area2D = CoinScript.new()
+	coin.position = local_pos
+	coin.target_player = target_player
+	coin.collected.connect(func(val): coin_collected.emit(val))
+	parent.add_child(coin)
+	return coin
+
+func create_coin_line(parent: Node2D, start_pos: Vector2, count: int, spacing: float = 40.0) -> void:
+	for i in range(count):
+		create_coin(parent, start_pos + Vector2(float(i) * spacing, 0.0))
+
+func create_coin_arch(parent: Node2D, start_pos: Vector2, count: int, height: float = 60.0) -> void:
+	for i in range(count):
+		var t := float(i) / float(count - 1) if count > 1 else 0.5
+		var x: float = float(i) * 35.0
+		var y: float = -sin(t * PI) * height
+		create_coin(parent, start_pos + Vector2(x, y))
+
+func spawn_dropped_coins(pos: Vector2, count: int = 2) -> void:
+	for i in range(count):
+		var coin: Area2D = CoinScript.new()
+		coin.position = pos
+		coin.target_player = target_player
+		var angle := randf_range(-PI * 0.85, -PI * 0.15)
+		var spd := randf_range(120.0, 240.0)
+		coin.set_pop_velocity(Vector2(cos(angle), sin(angle)) * spd)
+		coin.collected.connect(func(val): coin_collected.emit(val))
+		add_child(coin)
+
 func trigger_shockwave_damage(origin: Vector2, radius: float = 320.0) -> void:
 	for chunk in active_chunks:
 		for child in chunk.get_children():
 			if child.has_method("take_damage") and not (child is StaticBody2D or child is Area2D):
 				if child.global_position.distance_to(origin) <= radius:
-					child.take_damage(2)
+					child.take_damage(2, true)
 
 func _on_enemy_stomped(enemy: Node2D) -> void:
 	enemy_stomped.emit(enemy)
 
 func _on_enemy_defeated(pos: Vector2) -> void:
 	enemy_defeated.emit(pos)
+
+func _on_enemy_shoot(pos: Vector2, dir: Vector2) -> void:
+	enemy_bullet_fired.emit(pos, dir)
 
 # --- 特殊ギミック & ビジュアルクラス ---
 
@@ -338,7 +465,6 @@ class JumpPad extends Area2D:
 		var col := Color(0.2, 1.0, 0.4) if anim_timer <= 0.0 else Color(1.0, 1.0, 0.4)
 		draw_rect(Rect2(-w/2, -h/2, w, h), Color(0.05, 0.15, 0.08), true)
 		draw_rect(Rect2(-w/2, -h/2, w, h), col, false, 2.0)
-		# 矢印アイコン
 		var arrow_y := -h/2 - 4.0 - (sin(Time.get_ticks_msec() * 0.01) * 3.0)
 		draw_line(Vector2(-8, arrow_y + 6), Vector2(0, arrow_y), col, 2.5)
 		draw_line(Vector2(8, arrow_y + 6), Vector2(0, arrow_y), col, 2.5)
@@ -362,10 +488,8 @@ class CheckpointGateVisual extends Node2D:
 		# 2. ネオンツインピラー（左右の柱）
 		var pillar_w := 14.0
 		var pillar_h := 160.0
-		# 左柱
 		draw_rect(Rect2(-45.0, -pillar_h, pillar_w, pillar_h), Color(0.08, 0.08, 0.12), true)
 		draw_rect(Rect2(-45.0, -pillar_h, pillar_w, pillar_h), gold, false, 2.0)
-		# 右柱
 		draw_rect(Rect2(31.0, -pillar_h, pillar_w, pillar_h), Color(0.08, 0.08, 0.12), true)
 		draw_rect(Rect2(31.0, -pillar_h, pillar_w, pillar_h), gold, false, 2.0)
 		
@@ -374,7 +498,7 @@ class CheckpointGateVisual extends Node2D:
 		draw_rect(arch_rect, Color(0.1, 0.08, 0.02), true)
 		draw_rect(arch_rect, gold, false, 2.5)
 		
-		# 4. ホログラムネオンサイン「UPGRADE」
+		# 4. ホログラムネオンサイン
 		var sign_pulse := (int(time * 5.0) % 6 != 0)
 		var sign_col := cyan if sign_pulse else Color(0.3, 0.5, 0.6, 0.4)
 		draw_circle(Vector2(0, -pillar_h - 9.0), 5.0, sign_col)

@@ -19,6 +19,7 @@ signal quit_to_title_requested
 @onready var section_progress_bar: ProgressBar = $SectionProgressBar
 @onready var zone_label: Label = $ZoneLabel
 @onready var warning_banner: Label = $WarningBanner
+@onready var coin_label: Label = $CoinLabel
 
 @onready var title_panel: Control = $TitlePanel
 @onready var menu_start_btn: Button = $TitlePanel/MenuContainer/StartButton
@@ -216,6 +217,12 @@ func update_sp(sp_points: int) -> void:
 	else:
 		sp_label.text = "⚡ SP: 0"
 		sp_label.modulate = Color(0.6, 0.7, 0.8, 0.7)
+
+func update_coins(coins: int) -> void:
+	coin_label.text = "💎 %d" % coins
+	coin_label.scale = Vector2(1.2, 1.2)
+	var tween := create_tween()
+	tween.tween_property(coin_label, "scale", Vector2(1.0, 1.0), 0.1)
 
 func add_combo() -> void:
 	combo_count += 1

@@ -203,3 +203,29 @@ static func create_land_sound() -> AudioStreamWAV:
 	stream.stereo = false
 	stream.data = byte_array
 	return stream
+
+static func create_coin_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 0.14
+	var total_frames: int = int(sample_rate * duration)
+	var byte_array: PackedByteArray = PackedByteArray()
+	byte_array.resize(total_frames)
+	
+	var phase1: float = 0.0
+	var phase2: float = 0.0
+	for i in range(total_frames):
+		var t: float = float(i) / float(total_frames)
+		var freq: float = 987.77 if t < 0.5 else 1318.51 # B5 -> E6
+		phase1 += (freq * TAU) / float(sample_rate)
+		phase2 += ((freq * 2.0) * TAU) / float(sample_rate)
+		var sample: float = sin(phase1) * 0.7 + sin(phase2) * 0.3
+		var env: float = 1.0 - t
+		var val: int = int(clamp((sample * env * 0.45) * 127.0 + 128.0, 0.0, 255.0))
+		byte_array[i] = val
+		
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_8_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = byte_array
+	return stream

@@ -27,6 +27,7 @@ var sfx_shoot: AudioStreamPlayer
 var sfx_hit: AudioStreamPlayer
 var sfx_exp: AudioStreamPlayer
 var sfx_levelup: AudioStreamPlayer
+var sfx_coin: AudioStreamPlayer
 
 # ゲーム内数値
 var score: int = 0
@@ -44,6 +45,8 @@ func _ready() -> void:
 	build_manager = BuildManagerScript.new()
 	init_audio()
 	
+	spawner.target_player = player
+	
 	# プレイヤーシグナル接続
 	player.jumped.connect(_on_player_jumped)
 	player.bounced.connect(_on_player_bounced)
@@ -58,7 +61,9 @@ func _ready() -> void:
 	# スポナーシグナル接続
 	spawner.enemy_stomped.connect(_on_enemy_stomped)
 	spawner.enemy_defeated.connect(_on_enemy_defeated)
+	spawner.enemy_bullet_fired.connect(_on_enemy_bullet_fired)
 	spawner.checkpoint_reached.connect(_on_checkpoint_reached)
+	spawner.coin_collected.connect(_on_coin_collected)
 	
 	# HUDシグナル接続
 	hud.skill_selected.connect(_on_skill_selected)
@@ -81,6 +86,7 @@ func init_audio() -> void:
 	sfx_hit = create_player(SoundSynthScript.create_hit_sound())
 	sfx_exp = create_player(SoundSynthScript.create_exp_sound())
 	sfx_levelup = create_player(SoundSynthScript.create_levelup_sound())
+	sfx_coin = create_player(SoundSynthScript.create_coin_sound())
 
 func create_player(stream: AudioStreamWAV) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
